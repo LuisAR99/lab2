@@ -2,7 +2,6 @@ import streamlit as st
 from openai import OpenAI
 import pdfplumber 
 
-# Show title and description.
 st.title("📄 Document question answering — Lab 2")
 st.write(
     "Upload a document below and ask a question about it – GPT will answer! "
@@ -11,17 +10,17 @@ st.write(
 
 uploaded_file = None
 question = ""
-document = ""  # <<< ensure document is always defined
+document = ""  
 
 try:
-    api_key = st.secrets["OPENAI_API_KEY"]   # <— use this form
+    api_key = st.secrets["OPENAI_API_KEY"]   
 except KeyError:
     st.error(
         "Missing `OPENAI_API_KEY` in Streamlit secrets. "
         "Add it to .streamlit/secrets.toml locally, or set it in Streamlit Cloud → Settings → Secrets."
     )
     st.stop()
-# (Optional) You can defer client creation until after the key check.
+
 client = OpenAI(api_key=api_key, timeout=30, max_retries=2)
 
 st.sidebar.header("Summary Options")
@@ -45,10 +44,8 @@ question = st.text_area(
     disabled=not uploaded_file,
 )
 
-# Optional: submit button to avoid rapid re-runs
 submitted = st.button("Ask")
 
-# 4) Process + call LLM only when ready
 if uploaded_file and question and submitted:
     document = ""
 
@@ -80,3 +77,5 @@ if uploaded_file and question and submitted:
         timeout=30,
     )
     st.write_stream(stream)
+
+#I chose chatgpt 4.0-mini mostly becuase of costs. If the user is satisfied with the answer that 4.0 mini provided then they would hopefully not use the larger model. There is a chance however that some people would run both anyway so that would be something that would require further market research to see how users interact with the app.
