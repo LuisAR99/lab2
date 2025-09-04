@@ -24,6 +24,20 @@ except KeyError:
 # (Optional) You can defer client creation until after the key check.
 client = OpenAI(api_key=api_key, timeout=30, max_retries=2)
 
+st.sidebar.header("Summary Options")
+summary_choice = st.sidebar.radio(
+    "Choose a summary style:",
+    [
+        "100-word summary",
+        "Two connected paragraphs",
+        "Five bullet points",
+    ],
+    index=0,
+)
+use_advanced = st.sidebar.checkbox("Use Advanced Model (4o)", value=False)
+model = "gpt-4o" if use_advanced else "gpt-4o-mini"
+
+
 uploaded_file = st.file_uploader("Upload a document (.txt or .pdf)", type=("txt", "pdf"))
 question = st.text_area(
     "Now ask a question about the document!",
