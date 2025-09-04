@@ -13,10 +13,13 @@ uploaded_file = None
 question = ""
 document = ""  # <<< ensure document is always defined
 
-# Ask user for their OpenAI API key via `st.text_input`.
-openai_api_key = st.text_input("OpenAI API Key", type="password")
-openai_api_key = openai_api_key.strip()
-
+api_key = st.secrets.get("OPENAI_API_KEY")
+if not api_key:
+    st.error(
+        "Missing OPENAI_API_KEY in Streamlit secrets. "
+        "Add it to .streamlit/secrets.toml on your machine or in your cloud app."
+    )
+    st.stop()
 # (Optional) You can defer client creation until after the key check.
 client = OpenAI(api_key=openai_api_key, timeout=30, max_retries=2)
 
