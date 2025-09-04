@@ -13,11 +13,12 @@ uploaded_file = None
 question = ""
 document = ""  # <<< ensure document is always defined
 
-api_key = st.secrets("OPENAI_API_KEY")
-if not api_key:
+try:
+    api_key = st.secrets["OPENAI_API_KEY"]   # <— use this form
+except KeyError:
     st.error(
-        "Missing OPENAI_API_KEY in Streamlit secrets. "
-        "Add it to .streamlit/secrets.toml on your machine or in your cloud app."
+        "Missing `OPENAI_API_KEY` in Streamlit secrets. "
+        "Add it to .streamlit/secrets.toml locally, or set it in Streamlit Cloud → Settings → Secrets."
     )
     st.stop()
 # (Optional) You can defer client creation until after the key check.
