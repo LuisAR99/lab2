@@ -1,4 +1,4 @@
-git rm --cached .streamlit/secrets.toml
+git rm --cached lab2.streamlit/secrets.toml
 git commit -m "Stop tracking secrets file"
 git push
 
