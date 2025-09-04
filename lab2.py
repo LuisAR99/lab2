@@ -13,7 +13,7 @@ uploaded_file = None
 question = ""
 document = ""  # <<< ensure document is always defined
 
-api_key = st.secrets.get("OPENAI_API_KEY")
+api_key = st.secrets("OPENAI_API_KEY")
 if not api_key:
     st.error(
         "Missing OPENAI_API_KEY in Streamlit secrets. "
