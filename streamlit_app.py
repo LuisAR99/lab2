@@ -10,5 +10,5 @@ st.set_page_config(page_title="Multi-Page Labs", page_icon="🧪")
 lab2 = st.Page("lab2.py", title="Lab 2", icon="🧪")
 lab1 = st.Page("lab1.py", title="Lab 1", icon="🧪")
 
-nav = st.navigation(pages=[lab2, lab1])   # or: {"Labs": [lab2, lab1]}
+nav = st.navigation(pages=[lab2, lab1])   
 nav.run()
