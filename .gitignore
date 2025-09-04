@@ -3,7 +3,7 @@ git commit -m "Stop tracking secrets file"
 git push
 
 # Ignore Streamlit secrets (contains API keys)
-.streamlit/secrets.toml
+lab2.streamlit/secrets.toml
 
 # Byte-compiled / optimized files
 __pycache__/
