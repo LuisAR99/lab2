@@ -1,3 +1,7 @@
+git rm --cached .streamlit/secrets.toml
+git commit -m "Stop tracking secrets file"
+git push
+
 # Ignore Streamlit secrets (contains API keys)
 .streamlit/secrets.toml
 
