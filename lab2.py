@@ -22,7 +22,7 @@ except KeyError:
     )
     st.stop()
 # (Optional) You can defer client creation until after the key check.
-client = OpenAI(api_key=openai_api_key, timeout=30, max_retries=2)
+client = OpenAI(api_key=api_key, timeout=30, max_retries=2)
 
 if uploaded_file and question:
     document = ""
