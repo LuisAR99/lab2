@@ -24,62 +24,45 @@ except KeyError:
 # (Optional) You can defer client creation until after the key check.
 client = OpenAI(api_key=api_key, timeout=30, max_retries=2)
 
-if uploaded_file and question:
+uploaded_file = st.file_uploader("Upload a document (.txt or .pdf)", type=("txt", "pdf"))
+question = st.text_area(
+    "Now ask a question about the document!",
+    placeholder="Can you give me a short summary?",
+    disabled=not uploaded_file,
+)
+
+# Optional: submit button to avoid rapid re-runs
+submitted = st.button("Ask")
+
+# 4) Process + call LLM only when ready
+if uploaded_file and question and submitted:
     document = ""
 
-    # Make sure the buffer is at the start for every rerun
     if hasattr(uploaded_file, "seek"):
         uploaded_file.seek(0)
 
     if uploaded_file.type == "text/plain":
-        # Handle .txt files
         document = uploaded_file.read().decode("utf-8", errors="ignore")
-
     elif uploaded_file.type == "application/pdf":
-        # Handle .pdf files using pdfplumber
         with pdfplumber.open(uploaded_file) as pdf:
             for page in pdf.pages:
-                document += page.extract_text() or ""  # safe for blank pages
-
+                document += page.extract_text() or ""
     else:
         st.error("Unsupported file type. Please upload a .txt or .pdf.")
-        document = ""
+        st.stop()
 
-    if document:
-        messages = [
-            {
-                "role": "user",
-                "content": f"Here's a document: {document} \n\n---\n\n {question}",
-            }
-        ]
+    if not document.strip():
+        st.error("No text extracted. If this is a scanned PDF, you may need OCR.")
+        st.stop()
 
-        stream = client.chat.completions.create(
-            model="gpt-4.1",
-            messages=messages,
-            stream=True,
-            timeout=30
-        )
-        st.write_stream(stream)
+    messages = [
+        {"role": "user", "content": f"Here's a document:\n\n{document}\n\n---\n\n{question}"}
+    ]
 
-from openai import APIConnectionError, APIStatusError, RateLimitError, AuthenticationError
-
-# <<< Only run diagnostic call if we actually have content to send
-if document and question:
-    try:
-        resp = client.chat.completions.create(
-            model="gpt-4.1",  # <<< avoid 'gpt-5' unless you truly have access
-            messages=[{"role": "user", "content": f"Here's a document: {document}\n\n---\n\n{question}"}],
-            timeout=30,
-        )
-        st.write(resp.choices[0].message.content)
-
-    except APIConnectionError as e:
-        st.error(f"Network/connection problem to OpenAI: {e}")
-    except AuthenticationError:
-        st.error("Authentication failed. Check your API key (no spaces, correct key).")
-    except RateLimitError:
-        st.error("Rate limited. Try again or reduce request frequency.")
-    except APIStatusError as e:
-        st.error(f"OpenAI API returned status {e.status_code}: {e.message}")
-    except Exception as e:
-        st.error(f"Unexpected error: {e}")
+    stream = client.chat.completions.create(
+        model="gpt-4.1",
+        messages=messages,
+        stream=True,
+        timeout=30,
+    )
+    st.write_stream(stream)
