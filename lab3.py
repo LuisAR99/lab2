@@ -20,7 +20,6 @@ if "messages" not in st.session_state:
 if "last_handled_prompt" not in st.session_state:
     st.session_state.last_handled_prompt = None
 
-# --- Controls ---
 col1, col2 = st.columns(2)
 with col1:
     model_name = st.selectbox("Model", ["gpt-4o-mini", "gpt-4o"], index=0)
@@ -30,7 +29,6 @@ with col2:
         st.session_state.last_handled_prompt = None
         st.rerun()
 
-# --- Token trimming helper ---
 def trim_messages_to_tokens(messages, max_tokens=200, model="gpt-4o-mini"):
     enc = tiktoken.encoding_for_model(model)
     result = []
@@ -43,21 +41,19 @@ def trim_messages_to_tokens(messages, max_tokens=200, model="gpt-4o-mini"):
         total += t
     return list(reversed(result))
 
-# --- System prompt (LAB 3C behavior + kid-friendly tone) ---
 SYSTEM_PROMPT = (
     "You are a friendly chatbot explaining things so a 10-year-old can understand. "
     "Use short, clear sentences and simple words. "
     "Whenever you answer, finish with exactly this question on a new line: DO YOU WANT MORE INFO?"
     "If the user says yes then provide more information and re-ask DO YOU WANT MORE INFO"
     "If the user says no ask the user what question can the bot help with"
+    "If you are unsure re-ask DO YOU WANT MORE INFO"
 )
 
-# --- Display history ---
 for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.write(m["content"])
 
-# --- Chat input ---
 prompt = st.chat_input("Ask me anything…")
 if prompt and prompt != st.session_state.last_handled_prompt:
     st.session_state.last_handled_prompt = prompt
@@ -65,7 +61,6 @@ if prompt and prompt != st.session_state.last_handled_prompt:
     with st.chat_message("user"):
         st.write(prompt)
 
-    # Build final messages: system + trimmed history
     limited_history = trim_messages_to_tokens(st.session_state.messages, max_tokens=200, model=model_name)
     model_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + limited_history
 
