@@ -5,7 +5,6 @@ import tiktoken
 st.set_page_config(page_title="Lab 3 — Streaming Chatbot", page_icon="💬")
 st.title("💬 Lab 3 — Streaming Chatbot (token-limited + kid-friendly)")
 
-# --- Load secrets ---
 try:
     api_key = st.secrets["OPENAI_API_KEY"]
 except KeyError:
@@ -14,7 +13,6 @@ except KeyError:
 
 client = OpenAI(api_key=api_key, timeout=60, max_retries=2)
 
-# --- State ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "last_handled_prompt" not in st.session_state:
