@@ -49,7 +49,7 @@ SYSTEM_PROMPT = (
     "Use short, clear sentences and simple words. "
     "Whenever you answer, finish with exactly this question on a new line: DO YOU WANT MORE INFO?"
     "f the user says ‘yes’ then provide more information and re-ask “DO YOU WANT MORE INFO”
-    "If the user says no bot asks the user what question can the bot help with"
+    "If the user says no ask the user what question can the bot help with"
 )
 
 # --- Display history ---
