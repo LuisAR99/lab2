@@ -45,10 +45,6 @@ if prompt:
         )
         assistant_text = st.write_stream(stream)
 
-    st.session_state.messages.append({"role": "assistant", "content": assistant_text})
-
-# 4b) Call the LLM with the ENTIRE history (conversation buffer)
-#     but truncate to only the last 2 messages for context
 with st.chat_message("assistant"):
     # Get last two messages from memory
     last_two = st.session_state.messages[-2:] if len(st.session_state.messages) >= 2 else st.session_state.messages
