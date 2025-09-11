@@ -1,3 +1,4 @@
 streamlit
 openai
 pdfplumber
+tiktoken>=0.7.0
