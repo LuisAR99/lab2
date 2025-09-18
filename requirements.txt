@@ -4,4 +4,5 @@ pdfplumber
 tiktoken>=0.7.0
 chromadb 
 pypdf
+protobuf==3.20
 
