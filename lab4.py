@@ -218,9 +218,6 @@ for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.write(m["content"])
 
-# ---------------------------
-# Chat input + RAG inference
-# ---------------------------
 user_q = st.chat_input("Ask about the course (syllabus, policies, deadlines, etc.)…")
 
 if user_q and user_q != st.session_state.last_handled_prompt:
@@ -254,7 +251,6 @@ if user_q and user_q != st.session_state.last_handled_prompt:
         )
         assistant_text = st.write_stream(stream)
 
-        # Show which docs were used (not required, but helpful)
         if doc_keys:
             st.caption("Sources (doc_key order): " + ", ".join(doc_keys))
 
