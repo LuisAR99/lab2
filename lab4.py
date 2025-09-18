@@ -15,8 +15,8 @@ from pypdf import PdfReader
 # =========================
 # Page & App Settings
 # =========================
-st.set_page_config(page_title="Lab 3 — Streaming Chatbot", page_icon="💬")
-st.title("💬 Lab 3 — Streaming Chatbot (token-limited + kid-friendly)")
+st.set_page_config(page_title="Lab 4 — Vector Similarity", page_icon="💬")
+st.title("💬 Lab 4 — Vector Similarity")
 
 # Folder where your local PDFs live (relative to this app.py)
 PDF_DIR = "docs"   # e.g., put PDFs in ./docs ; can be nested; change as needed
