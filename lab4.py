@@ -11,28 +11,22 @@ import sys
 # ---------------------------------------------------------
 # ✅ FIX for ChromaDB on Streamlit Cloud (use modern SQLite)
 # ---------------------------------------------------------
-# Matches your slide: import pysqlite3 and swap stdlib sqlite3
-__import__("pysqlite3")  # ensure wheel is present (pysqlite3-binary)
+__import__("pysqlite3")                 # requires pysqlite3-binary in requirements
 sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
-# (dbapi2 is optional; most libs import sqlite3 directly)
 
 # Now safe to import chroma
 import chromadb
-from chromadb.config import Settings
 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
-
-# Use PyPDF2 as in your slide
 from PyPDF2 import PdfReader
 
 # =========================
 # Page & App Settings
 # =========================
-st.set_page_config(page_title="Lab 4 — Vector Similarity", page_icon="💬")
-st.title("💬 Lab 4 — Vector Similarity")
+st.set_page_config(page_title="Lab 4 — Vector Similairty", page_icon="💬")
+st.title("Lab 4 — Vector Similairty")
 
-# Folder where your local PDFs live (commit them to your repo)
-PDF_DIR = "docs"                  # e.g., ./docs
-CHROMA_PATH = "./ChromaDB_for_lab"  # matches your slide
+PDF_DIR = "docs"                      # commit PDFs under ./docs
+CHROMA_PATH = "./ChromaDB_for_lab"    # on-disk persistence
 
 # =========================
 # Secrets & OpenAI client
@@ -54,8 +48,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "last_handled_prompt" not in st.session_state:
     st.session_state.last_handled_prompt = None
-# Will hold the Chroma collection
-# st.session_state.Lab4_vectorDB
+# st.session_state.Lab4_vectorDB will hold the Chroma collection
 
 # =========================
 # UI: Model & Clear
@@ -100,7 +93,7 @@ SYSTEM_PROMPT = (
 )
 
 # =========================
-# PDF → Text, Chunking, ChromaDB (PersistentClient)
+# PDF → Text, Chunking, ChromaDB (Persistent)
 # =========================
 def _pdf_to_text_from_path(pdf_path: Path) -> str:
     with pdf_path.open("rb") as f:
@@ -130,20 +123,17 @@ def _find_local_pdfs(root_dir: str):
 
 def get_or_create_lab4_vdb_from_local(pdf_dir: str):
     """
-    Build (or return) Chroma 'Lab4Collection' using PersistentClient at CHROMA_PATH.
-    Only builds once per app run; collection handle stored in st.session_state.Lab4_vectorDB.
+    Build (or return) Chroma 'Lab4Collection' at CHROMA_PATH.
+    Only initializes once per app run; handle saved in st.session_state.Lab4_vectorDB.
     """
     if "Lab4_vectorDB" in st.session_state and st.session_state.Lab4_vectorDB is not None:
         return st.session_state.Lab4_vectorDB
 
-    # Ensure path exists
     Path(CHROMA_PATH).mkdir(parents=True, exist_ok=True)
-
-    # ✅ Your slide's approach: PersistentClient with on-disk store
     chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
 
     embedder = OpenAIEmbeddingFunction(
-        api_key=client.api_key,          # reuse the same key
+        api_key=client.api_key,
         model_name="text-embedding-3-small"
     )
 
@@ -153,13 +143,13 @@ def get_or_create_lab4_vdb_from_local(pdf_dir: str):
         metadata={"hnsw:space": "cosine"}
     )
 
-    # Ingest local PDFs (skip ones already present)
     pdf_paths = _find_local_pdfs(pdf_dir)
     if not pdf_paths:
         st.info(f"No PDFs found under '{pdf_dir}'.")
         st.session_state.Lab4_vectorDB = collection
         return collection
 
+    # Skip docs already in the collection
     existing_ids = set()
     try:
         existing = collection.get()
@@ -200,7 +190,36 @@ def get_or_create_lab4_vdb_from_local(pdf_dir: str):
     return collection
 
 # =========================
-# Build Vector DB once
+# NEW: Top doc IDs helper
+# =========================
+def top_doc_ids(query: str, n_docs: int = 3, per_query_k: int = 25):
+    """
+    Return up to `n_docs` unique doc_keys in ranked order for a query.
+    Collapses top `per_query_k` chunk hits by doc_key.
+    """
+    vdb = st.session_state.get("Lab4_vectorDB")
+    if not vdb:
+        return []
+
+    res = vdb.query(
+        query_texts=[query],
+        n_results=per_query_k,
+        include=["metadatas"]
+    )
+    metas = (res.get("metadatas") or [[]])[0]
+
+    ordered_unique, seen = [], set()
+    for m in metas:
+        dk = m.get("doc_key")
+        if dk and dk not in seen:
+            seen.add(dk)
+            ordered_unique.append(dk)
+        if len(ordered_unique) >= n_docs:
+            break
+    return ordered_unique
+
+# =========================
+# Build Vector DB once + Sidebar search (returns top 3 IDs)
 # =========================
 with st.sidebar:
     st.subheader("📚 Local Docs (SQLite via pysqlite3)")
@@ -210,14 +229,13 @@ with st.sidebar:
             vdb = get_or_create_lab4_vdb_from_local(PDF_DIR)
             st.success(f"Vector DB ready. Chunks: ~{vdb.count()}")
 
-    # Optional quick query UI
     vdb = st.session_state.get("Lab4_vectorDB")
     if vdb:
         st.divider()
-        q = st.text_input("Quick search your docs (returns top 3 doc IDs)")
+        q = st.text_input("Quick search (returns top 3 doc IDs)")
         if q:
             ids = top_doc_ids(q, n_docs=3, per_query_k=25)
-            st.write(ids)
+            st.write(ids)  # e.g., ["0000_file.pdf", "0003_other.pdf", "0005_more.pdf"]
 
 # =========================
 # Chat UI
@@ -247,4 +265,3 @@ if prompt and prompt != st.session_state.last_handled_prompt:
 
     st.session_state.messages.append({"role": "assistant", "content": assistant_text})
     st.rerun()
-
