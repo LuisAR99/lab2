@@ -21,9 +21,6 @@ st.title("🎓 Lab 4b — Course Information Chatbot (RAG)")
 PDF_DIR = "docs"                      
 CHROMA_PATH = "./ChromaDB_for_lab"    
 
-# ---------------------------
-# Secrets & OpenAI client
-# ---------------------------
 if "openai_client" not in st.session_state:
     try:
         api_key = st.secrets["OPENAI_API_KEY"]
@@ -33,21 +30,13 @@ if "openai_client" not in st.session_state:
     st.session_state.openai_client = OpenAI(api_key=api_key, timeout=60, max_retries=2)
 client = st.session_state.openai_client
 
-# ---------------------------
-# Session state
-# ---------------------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "last_handled_prompt" not in st.session_state:
     st.session_state.last_handled_prompt = None
-# st.session_state.Lab4_vectorDB will hold the Chroma collection
 
-# ---------------------------
-# Model picker & clear
-# ---------------------------
 col1, col2 = st.columns(2)
 with col1:
-    # Include gpt-5-mini option as requested
     model_name = st.selectbox("Model", ["gpt-5-mini", "gpt-4o-mini", "gpt-4o"], index=0)
 with col2:
     if st.button("Clear chat"):
@@ -56,9 +45,6 @@ with col2:
         # st.session_state.pop("Lab4_vectorDB", None)  # uncomment to rebuild vectors
         st.rerun()
 
-# ---------------------------
-# Helpers: token trimming
-# ---------------------------
 def _get_encoding(model: str):
     try:
         return tiktoken.encoding_for_model(model)
@@ -76,9 +62,6 @@ def trim_messages_to_tokens(messages, max_tokens=200, model="gpt-4o-mini"):
         total += t
     return list(reversed(result))
 
-# ---------------------------
-# PDF → text, chunking, Chroma (persistent)
-# ---------------------------
 def _pdf_to_text_from_path(pdf_path: Path) -> str:
     with pdf_path.open("rb") as f:
         reader = PdfReader(f)
@@ -169,9 +152,7 @@ def get_or_create_lab4_vdb_from_local(pdf_dir: str):
     st.session_state.Lab4_vectorDB = collection
     return collection
 
-# ---------------------------
-# RAG: retrieve context
-# ---------------------------
+
 def retrieve_context(query: str, k_chunks: int = 6) -> Tuple[str, List[str]]:
     """
     Returns (context_text, doc_keys_used).
@@ -211,9 +192,7 @@ def retrieve_context(query: str, k_chunks: int = 6) -> Tuple[str, List[str]]:
             ordered_doc_keys.append(dk)
     return context_text, ordered_doc_keys
 
-# ---------------------------
-# Sidebar: build vectors (removed prior testing UI)
-# ---------------------------
+
 with st.sidebar:
     st.subheader("📚 Course Materials")
     st.caption(f"Indexing PDFs from: `{PDF_DIR}`")
@@ -222,9 +201,8 @@ with st.sidebar:
             vdb = get_or_create_lab4_vdb_from_local(PDF_DIR)
             st.success(f"Vector DB ready. Chunks: ~{vdb.count()}")
 
-# ---------------------------
 # System prompt (RAG-aware)
-# ---------------------------
+
 SYSTEM_PROMPT = (
     "You are a helpful course information assistant for our class. "
     "When a question arrives, if CONTEXT is provided, use it to answer first. "
@@ -235,9 +213,7 @@ SYSTEM_PROMPT = (
     "If the question cannot be answered, say so and suggest what to ask or where to look."
 )
 
-# ---------------------------
-# Chat history
-# ---------------------------
+
 for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.write(m["content"])
