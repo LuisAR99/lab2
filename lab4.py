@@ -1,4 +1,3 @@
-# app.py — Lab 4b RAG Chatbot (Course Info)
 import streamlit as st
 from openai import OpenAI
 import tiktoken
@@ -9,25 +8,18 @@ import os
 import sys
 from typing import List, Tuple
 
-# ---------------------------
-# SQLite fix for ChromaDB
-# ---------------------------
-__import__("pysqlite3")                 # needs pysqlite3-binary
+__import__("pysqlite3")                
 sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
 
-# Chroma & PDF
 import chromadb
 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 from PyPDF2 import PdfReader
 
-# ---------------------------
-# App settings
-# ---------------------------
 st.set_page_config(page_title="Lab 4b — Course RAG Chatbot", page_icon="🎓")
 st.title("🎓 Lab 4b — Course Information Chatbot (RAG)")
 
-PDF_DIR = "docs"                      # commit PDFs under ./docs
-CHROMA_PATH = "./ChromaDB_for_lab"    # persisted vector store path
+PDF_DIR = "docs"                      
+CHROMA_PATH = "./ChromaDB_for_lab"    
 
 # ---------------------------
 # Secrets & OpenAI client
