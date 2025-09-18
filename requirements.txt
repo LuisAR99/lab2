@@ -4,4 +4,4 @@ pdfplumber
 tiktoken>=0.7.0
 chromadb 
 pypdf
-sqlite3 >= 3.35.0
+
