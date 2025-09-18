@@ -3,7 +3,7 @@ from openai import OpenAI
 import tiktoken
 
 st.set_page_config(page_title="Lab 3 — Streaming Chatbot", page_icon="💬")
-st.title("💬 Lab 3 — Streaming Chatbot (token-limited + kid-friendly)")
+st.title("💬 Lab 4 — Vectors)")
 
 try:
     api_key = st.secrets["OPENAI_API_KEY"]
