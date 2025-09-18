@@ -214,10 +214,10 @@ with st.sidebar:
     vdb = st.session_state.get("Lab4_vectorDB")
     if vdb:
         st.divider()
-        q = st.text_input("Quick search your docs")
+        q = st.text_input("Quick search your docs (returns top 3 doc IDs)")
         if q:
-            res = vdb.query(query_texts=[q], n_results=5)
-            st.write(res)
+            ids = top_doc_ids(q, n_docs=3, per_query_k=25)
+            st.write(ids)
 
 # =========================
 # Chat UI
