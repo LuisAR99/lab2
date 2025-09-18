@@ -1,4 +1,4 @@
-# app.py
+# app.py — Lab 4b RAG Chatbot (Course Info)
 import streamlit as st
 from openai import OpenAI
 import tiktoken
@@ -7,30 +7,31 @@ from pathlib import Path
 import glob
 import os
 import sys
+from typing import List, Tuple
 
-# ---------------------------------------------------------
-# ✅ FIX for ChromaDB on Streamlit Cloud (use modern SQLite)
-# ---------------------------------------------------------
-__import__("pysqlite3")                 # requires pysqlite3-binary in requirements
+# ---------------------------
+# SQLite fix for ChromaDB
+# ---------------------------
+__import__("pysqlite3")                 # needs pysqlite3-binary
 sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
 
-# Now safe to import chroma
+# Chroma & PDF
 import chromadb
 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 from PyPDF2 import PdfReader
 
-# =========================
-# Page & App Settings
-# =========================
-st.set_page_config(page_title="Lab 4 — Vector Similairty", page_icon="💬")
-st.title("Lab 4 — Vector Similairty")
+# ---------------------------
+# App settings
+# ---------------------------
+st.set_page_config(page_title="Lab 4b — Course RAG Chatbot", page_icon="🎓")
+st.title("🎓 Lab 4b — Course Information Chatbot (RAG)")
 
 PDF_DIR = "docs"                      # commit PDFs under ./docs
-CHROMA_PATH = "./ChromaDB_for_lab"    # on-disk persistence
+CHROMA_PATH = "./ChromaDB_for_lab"    # persisted vector store path
 
-# =========================
+# ---------------------------
 # Secrets & OpenAI client
-# =========================
+# ---------------------------
 if "openai_client" not in st.session_state:
     try:
         api_key = st.secrets["OPENAI_API_KEY"]
@@ -38,34 +39,34 @@ if "openai_client" not in st.session_state:
         st.error("Missing `OPENAI_API_KEY` in Streamlit secrets.")
         st.stop()
     st.session_state.openai_client = OpenAI(api_key=api_key, timeout=60, max_retries=2)
-
 client = st.session_state.openai_client
 
-# =========================
-# Session State
-# =========================
+# ---------------------------
+# Session state
+# ---------------------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "last_handled_prompt" not in st.session_state:
     st.session_state.last_handled_prompt = None
 # st.session_state.Lab4_vectorDB will hold the Chroma collection
 
-# =========================
-# UI: Model & Clear
-# =========================
+# ---------------------------
+# Model picker & clear
+# ---------------------------
 col1, col2 = st.columns(2)
 with col1:
-    model_name = st.selectbox("Model", ["gpt-4o-mini", "gpt-4o"], index=0)
+    # Include gpt-5-mini option as requested
+    model_name = st.selectbox("Model", ["gpt-5-mini", "gpt-4o-mini", "gpt-4o"], index=0)
 with col2:
     if st.button("Clear chat"):
         st.session_state.messages = []
         st.session_state.last_handled_prompt = None
-        # st.session_state.pop("Lab4_vectorDB", None)  # uncomment for full reset
+        # st.session_state.pop("Lab4_vectorDB", None)  # uncomment to rebuild vectors
         st.rerun()
 
-# =========================
+# ---------------------------
 # Helpers: token trimming
-# =========================
+# ---------------------------
 def _get_encoding(model: str):
     try:
         return tiktoken.encoding_for_model(model)
@@ -83,18 +84,9 @@ def trim_messages_to_tokens(messages, max_tokens=200, model="gpt-4o-mini"):
         total += t
     return list(reversed(result))
 
-SYSTEM_PROMPT = (
-    "You are a friendly chatbot explaining things so a 10-year-old can understand. "
-    "Use short, clear sentences and simple words. "
-    "Whenever you answer, finish with exactly this question on a new line: DO YOU WANT MORE INFO?"
-    "If the user says yes then provide more information and re-ask DO YOU WANT MORE INFO"
-    "If the user says no ask the user what question can the bot help with"
-    "If you are unsure re-ask DO YOU WANT MORE INFO"
-)
-
-# =========================
-# PDF → Text, Chunking, ChromaDB (Persistent)
-# =========================
+# ---------------------------
+# PDF → text, chunking, Chroma (persistent)
+# ---------------------------
 def _pdf_to_text_from_path(pdf_path: Path) -> str:
     with pdf_path.open("rb") as f:
         reader = PdfReader(f)
@@ -106,7 +98,7 @@ def _pdf_to_text_from_path(pdf_path: Path) -> str:
                 pages.append("")
         return "\n".join(pages).strip()
 
-def _chunk_text(text: str, chunk_chars: int = 2000, overlap: int = 200):
+def _chunk_text(text: str, chunk_chars: int = 2000, overlap: int = 200) -> List[str]:
     text = text.replace("\r", "")
     chunks, start, n = [], 0, len(text)
     while start < n:
@@ -117,15 +109,11 @@ def _chunk_text(text: str, chunk_chars: int = 2000, overlap: int = 200):
         start = max(end - overlap, 0)
     return chunks
 
-def _find_local_pdfs(root_dir: str):
+def _find_local_pdfs(root_dir: str) -> List[Path]:
     pattern = str(Path(root_dir) / "**" / "*.pdf")
     return [Path(p) for p in glob.glob(pattern, recursive=True)]
 
 def get_or_create_lab4_vdb_from_local(pdf_dir: str):
-    """
-    Build (or return) Chroma 'Lab4Collection' at CHROMA_PATH.
-    Only initializes once per app run; handle saved in st.session_state.Lab4_vectorDB.
-    """
     if "Lab4_vectorDB" in st.session_state and st.session_state.Lab4_vectorDB is not None:
         return st.session_state.Lab4_vectorDB
 
@@ -145,11 +133,11 @@ def get_or_create_lab4_vdb_from_local(pdf_dir: str):
 
     pdf_paths = _find_local_pdfs(pdf_dir)
     if not pdf_paths:
-        st.info(f"No PDFs found under '{pdf_dir}'.")
+        st.info(f"No PDFs found under `{pdf_dir}`.")
         st.session_state.Lab4_vectorDB = collection
         return collection
 
-    # Skip docs already in the collection
+    # Add only new docs
     existing_ids = set()
     try:
         existing = collection.get()
@@ -189,79 +177,118 @@ def get_or_create_lab4_vdb_from_local(pdf_dir: str):
     st.session_state.Lab4_vectorDB = collection
     return collection
 
-# =========================
-# NEW: Top doc IDs helper
-# =========================
-def top_doc_ids(query: str, n_docs: int = 3, per_query_k: int = 25):
+# ---------------------------
+# RAG: retrieve context
+# ---------------------------
+def retrieve_context(query: str, k_chunks: int = 6) -> Tuple[str, List[str]]:
     """
-    Return up to `n_docs` unique doc_keys in ranked order for a query.
-    Collapses top `per_query_k` chunk hits by doc_key.
+    Returns (context_text, doc_keys_used).
+    Collapses by doc_key to keep a mix if many chunks from same file appear.
     """
     vdb = st.session_state.get("Lab4_vectorDB")
     if not vdb:
-        return []
+        return "", []
 
     res = vdb.query(
         query_texts=[query],
-        n_results=per_query_k,
-        include=["metadatas"]
+        n_results=max(k_chunks * 3, k_chunks),   # fetch more then collapse
+        include=["documents", "metadatas", "distances"]
     )
+    docs = (res.get("documents") or [[]])[0]
     metas = (res.get("metadatas") or [[]])[0]
 
-    ordered_unique, seen = [], set()
-    for m in metas:
-        dk = m.get("doc_key")
+    # keep order; allow multiple chunks per doc, but cap total k_chunks
+    context_chunks = []
+    used_docs = []
+    for text, m in zip(docs, metas):
+        if not text:
+            continue
+        context_chunks.append(text.strip())
+        used_docs.append(m.get("doc_key", ""))
+        if len(context_chunks) >= k_chunks:
+            break
+
+    # join with clear separators
+    context_text = "\n\n---\n\n".join(context_chunks)
+    # unique doc_keys in order
+    ordered_doc_keys = []
+    seen = set()
+    for dk in used_docs:
         if dk and dk not in seen:
             seen.add(dk)
-            ordered_unique.append(dk)
-        if len(ordered_unique) >= n_docs:
-            break
-    return ordered_unique
+            ordered_doc_keys.append(dk)
+    return context_text, ordered_doc_keys
 
-# =========================
-# Build Vector DB once + Sidebar search (returns top 3 IDs)
-# =========================
+# ---------------------------
+# Sidebar: build vectors (removed prior testing UI)
+# ---------------------------
 with st.sidebar:
-    st.subheader("📚 Local Docs (SQLite via pysqlite3)")
-    st.caption(f"Loading PDFs from: `{PDF_DIR}`")
+    st.subheader("📚 Course Materials")
+    st.caption(f"Indexing PDFs from: `{PDF_DIR}`")
     if "Lab4_vectorDB" not in st.session_state:
-        with st.spinner("Building Lab4Collection from local PDFs (one-time; persisted)…"):
+        with st.spinner("Building vector DB from local PDFs (persisted)…"):
             vdb = get_or_create_lab4_vdb_from_local(PDF_DIR)
             st.success(f"Vector DB ready. Chunks: ~{vdb.count()}")
 
-    vdb = st.session_state.get("Lab4_vectorDB")
-    if vdb:
-        st.divider()
-        q = st.text_input("Quick search (returns top 3 doc IDs)")
-        if q:
-            ids = top_doc_ids(q, n_docs=3, per_query_k=25)
-            st.write(ids)  # e.g., ["0000_file.pdf", "0003_other.pdf", "0005_more.pdf"]
+# ---------------------------
+# System prompt (RAG-aware)
+# ---------------------------
+SYSTEM_PROMPT = (
+    "You are a helpful course information assistant for our class. "
+    "When a question arrives, if CONTEXT is provided, use it to answer first. "
+    "Be concise and student-friendly. "
+    "Always disclose whether you used the course materials: "
+    "- If context is present, begin your first line with: 'Using course materials:' "
+    "- If no context is present, begin with: 'No matching course materials; general answer:' "
+    "If the question cannot be answered, say so and suggest what to ask or where to look."
+)
 
-# =========================
-# Chat UI
-# =========================
+# ---------------------------
+# Chat history
+# ---------------------------
 for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.write(m["content"])
 
-prompt = st.chat_input("Ask me anything…")
-if prompt and prompt != st.session_state.last_handled_prompt:
-    st.session_state.last_handled_prompt = prompt
-    st.session_state.messages.append({"role": "user", "content": prompt})
+# ---------------------------
+# Chat input + RAG inference
+# ---------------------------
+user_q = st.chat_input("Ask about the course (syllabus, policies, deadlines, etc.)…")
+
+if user_q and user_q != st.session_state.last_handled_prompt:
+    st.session_state.last_handled_prompt = user_q
+    st.session_state.messages.append({"role": "user", "content": user_q})
     with st.chat_message("user"):
-        st.write(prompt)
+        st.write(user_q)
 
-    limited_history = trim_messages_to_tokens(st.session_state.messages, max_tokens=200, model=model_name)
-    model_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + limited_history
+    # RAG retrieve
+    context_text, doc_keys = retrieve_context(user_q, k_chunks=6)
 
+    # Build messages: include context as a dedicated system message
+    limited_history = trim_messages_to_tokens(
+        st.session_state.messages, max_tokens=200, model=model_name
+    )
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    if context_text:
+        messages.append({
+            "role": "system",
+            "content": f"CONTEXT (course materials):\n{context_text}"
+        })
+    messages += limited_history
+
+    # Stream answer
     with st.chat_message("assistant"):
         stream = client.chat.completions.create(
             model=model_name,
-            messages=model_messages,
+            messages=messages,
             stream=True,
             timeout=60,
         )
         assistant_text = st.write_stream(stream)
+
+        # Show which docs were used (not required, but helpful)
+        if doc_keys:
+            st.caption("Sources (doc_key order): " + ", ".join(doc_keys))
 
     st.session_state.messages.append({"role": "assistant", "content": assistant_text})
     st.rerun()
