@@ -5,4 +5,4 @@ tiktoken>=0.7.0
 chromadb 
 pypdf
 protobuf==3.20
-
+sqlite3 >= 3.35.0
