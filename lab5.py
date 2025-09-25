@@ -38,7 +38,7 @@ def get_current_weather(location: str, api_key: str) -> Dict[str, Any]:
     """
     Calls OpenWeatherMap Current Weather endpoint by city name.
     Extracts temperature (C/F), feels_like, min, max, humidity, wind, and condition.
-    If the location contains a comma, we only take the city name.
+    If the location contains a comma, we take the city name and country name.
     """
     if "," in location:
         location = location.split(",")[0].strip()
