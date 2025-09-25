@@ -1,3 +1,10 @@
+# Lab5.py — “What to Wear” Weather Bot (per Lab 5 instructions)
+# - Single-shot app: user enters a city, bot returns clothing + picnic advice
+# - Uses OpenWeatherMap API (key from st.secrets)
+# - Implements OpenAI tool/function: get_current_weather(location) with tool_choice="auto"
+# - Properly appends the assistant message with `tool_calls` BEFORE any role="tool" messages
+# - Streams the final answer
+
 import streamlit as st
 import requests
 from openai import OpenAI
@@ -15,7 +22,7 @@ def _secret(name: str) -> str:
         return ""
 
 OPENAI_API_KEY = _secret("OPENAI_API_KEY")
-OWM_API_KEY    = _secret("OPENWEATHER_API_KEY")  # e.g., "abc123..." from OpenWeather
+OWM_API_KEY    = _secret("OPENWEATHER_API_KEY")  # OpenWeatherMap key
 
 if not OPENAI_API_KEY:
     st.error("Missing `OPENAI_API_KEY` in Streamlit secrets.")
@@ -30,8 +37,8 @@ client = OpenAI(api_key=OPENAI_API_KEY, timeout=60, max_retries=2)
 def get_current_weather(location: str, api_key: str) -> Dict[str, Any]:
     """
     Calls OpenWeatherMap Current Weather endpoint by city name.
-    Extracts temperature (C/F), feels_like, min, max, humidity, condition, wind, etc.
-    If the location contains a comma, we only take the city name (per lab hint).
+    Extracts temperature (C/F), feels_like, min, max, humidity, wind, and condition.
+    If the location contains a comma, we only take the city name.
     """
     if "," in location:
         location = location.split(",")[0].strip()
@@ -76,23 +83,14 @@ def get_current_weather(location: str, api_key: str) -> Dict[str, Any]:
     }
     return result
 
-# --- UI: simple form (NOT a chat) ---
+# --- UI: simple form ---
 with st.form("weather_form"):
-    st.write("Enter a city and I’ll suggest what to wear and if it’s a good day for a picnic.")
+    st.write("Enter a city and I’ll suggest what to wear and whether it’s a good day for a picnic.")
     city = st.text_input("City", placeholder="e.g., Syracuse, NY", value="")
-    col_a, col_b, col_c = st.columns(3)
-    with col_a:
-        if st.form_submit_button("Use Syracuse, NY"):
-            city = "Syracuse, NY"
-    with col_b:
-        if st.form_submit_button("Use London, England"):
-            city = "London, England"
-    with col_c:
-        submit = st.form_submit_button("Get suggestion")
+    submitted = st.form_submit_button("Get suggestion")
 
-# If either explicit submit or a quick-pick is pressed, run
-if submit or city in ("Syracuse, NY", "London, England"):
-    user_location = city.strip() if city.strip() else "Syracuse, NY"  # default per lab
+if submitted:
+    user_location = city.strip() if city.strip() else "Syracuse, NY"
 
     # --- Messages + Tool definition (OpenAI function calling) ---
     SYSTEM_PROMPT = (
@@ -105,7 +103,6 @@ if submit or city in ("Syracuse, NY", "London, England"):
         "Be concise and practical."
     )
 
-    # Tool schema for auto function-calling
     tools = [
         {
             "type": "function",
@@ -126,7 +123,6 @@ if submit or city in ("Syracuse, NY", "London, England"):
         }
     ]
 
-    # First call: allow the model to request the tool if it needs weather
     initial_messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {
@@ -149,12 +145,13 @@ if submit or city in ("Syracuse, NY", "London, England"):
         temperature=0.2,
     )
 
-    # Check if the model asked to call our tool
+    # Collect tool calls (if any) from the FIRST assistant message
     tool_outputs = []
-    for choice in first.choices:
-        tcalls = getattr(choice.message, "tool_calls", None)
-        if not tcalls:
-            continue
+    assistant_msg = first.choices[0].message  # the assistant message that may contain tool_calls
+    tcalls = getattr(assistant_msg, "tool_calls", None)
+
+    if tcalls:
+        # For each requested tool call, run our local function and prepare role="tool" messages
         for call in tcalls:
             fn = call.function
             if fn and fn.name == "get_current_weather":
@@ -168,16 +165,25 @@ if submit or city in ("Syracuse, NY", "London, England"):
                 weather = get_current_weather(loc, OWM_API_KEY)
                 tool_outputs.append(
                     {
-                        "id": call.id,  # tie back to this tool call
+                        "id": call.id,        # tie back to the tool call id
                         "name": fn.name,
                         "content": json.dumps(weather),
                     }
                 )
 
-    # Build message list for the second call (include any tool outputs)
+    # Build the follow-up conversation:
+    # (1) system + user (initial_messages)
     followup_messages = list(initial_messages)
+    # (2) append the assistant message that contained the tool_calls (REQUIRED)
+    #     even if its content is empty, include it with tool_calls so role="tool" is valid next.
+    followup_messages.append({
+        "role": assistant_msg.role,
+        "content": assistant_msg.content,
+        "tool_calls": assistant_msg.tool_calls
+    })
+
     if tool_outputs:
-        # Attach each tool result as a message with role=tool
+        # (3) append our tool results (role="tool") bound to the tool_call_id
         for out in tool_outputs:
             followup_messages.append(
                 {
@@ -188,17 +194,14 @@ if submit or city in ("Syracuse, NY", "London, England"):
                 }
             )
     else:
-        # If the model didn't call the tool (unlikely), add a gentle nudge with a default fetch
-        st.caption("→ No tool call detected; using default weather fetch.")
+        # No tool call requested; provide a fallback weather fetch in a system message
+        st.caption("→ No tool call detected; using fallback weather fetch.")
         w = get_current_weather(user_location, OWM_API_KEY)
         followup_messages.append(
-            {
-                "role": "system",
-                "content": f"Weather data (fallback): {json.dumps(w)}",
-            }
+            {"role": "system", "content": f"Weather data (fallback): {json.dumps(w)}"}
         )
 
-    # Second call: stream the final suggestion
+    # Step 2: stream the final suggestion
     st.subheader("👚 Suggestion")
     with st.chat_message("assistant"):
         stream = client.chat.completions.create(
@@ -209,7 +212,7 @@ if submit or city in ("Syracuse, NY", "London, England"):
         )
         final_text = st.write_stream(stream)
 
-    # (Optional) Show raw weather JSON for transparency
+    # Optional: Show the raw weather JSON
     with st.expander("Raw weather data"):
         if tool_outputs:
             try:
@@ -218,4 +221,3 @@ if submit or city in ("Syracuse, NY", "London, England"):
                 st.write(tool_outputs[0]["content"])
         else:
             st.write("Used fallback fetch above.")
-
