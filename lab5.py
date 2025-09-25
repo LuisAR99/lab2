@@ -86,11 +86,11 @@ def get_current_weather(location: str, api_key: str) -> Dict[str, Any]:
 # --- UI: simple form ---
 with st.form("weather_form"):
     st.write("Enter a city and I’ll suggest what to wear and whether it’s a good day for a picnic.")
-    city = st.text_input("City", placeholder="e.g., Syracuse, NY", value="")
+    city = st.text_input("City", placeholder="e.g., Syracuse, US", value="")
     submitted = st.form_submit_button("Get suggestion")
 
 if submitted:
-    user_location = city.strip() if city.strip() else "Syracuse, NY"
+    user_location = city.strip() if city.strip() else "Syracuse, US"
 
     # --- Messages + Tool definition (OpenAI function calling) ---
     SYSTEM_PROMPT = (
