@@ -225,7 +225,7 @@ st.session_state.lab6_agent = AgentExecutor(
 with st.sidebar:
     if st.button("Clear conversation"):
         st.session_state.lab6_messages = []
-        st.experimental_rerun()
+        st.rerun()
 
 # Render prior turns
 for m in st.session_state.lab6_messages:
