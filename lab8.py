@@ -31,8 +31,7 @@ from openai import OpenAI
 
 # Read only from Streamlit secrets
 raw_key = st.secrets.get("OPENAI_API_KEY", "")
-org_id  = st.secrets.get("OPENAI_ORG_ID", "")
-proj_id = st.secrets.get("OPENAI_PROJECT_ID", "")
+
 
 # Normalize: strip whitespace/newlines that sometimes sneak in via secrets UI
 OPENAI_KEY = (raw_key or "").strip()
