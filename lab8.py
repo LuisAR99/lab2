@@ -31,7 +31,7 @@ def _secret(name: str) -> str:
 
 OPENAI_KEY = _secret("OPENAI_API_KEY")
 if not OPENAI_KEY:
-    st.error("Missing `OPENAI_API_KEY` in Streamlit secrets.")
+    st.error("Missing `OPENAI_KEY` in Streamlit secrets.")
     st.stop()
 
 oc = OpenAI(api_key=OPENAI_API_KEY, timeout=60, max_retries=2)
