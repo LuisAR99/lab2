@@ -29,7 +29,7 @@ def _secret(name: str) -> str:
     except KeyError:
         return ""
 
-OPENAI_KEY = _secret("OPENAI_API_KEY")
+OPENAI_KEY = st.secrets("OPENAI_API_KEY")
 if not OPENAI_KEY:
     st.error("Missing `OPENAI_KEY` in Streamlit secrets.")
     st.stop()
