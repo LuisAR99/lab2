@@ -24,16 +24,50 @@ st.title("📊 IST 688 — SEC 10-Q RAG + Re-Ranking Chatbot")
 
 # ---------------- Secrets / Clients ----------------
 
-OPENAI_KEY = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+# ---------------- Secrets / Clients ----------------
+import os
+import streamlit as st
+from openai import OpenAI
+
+# Read only from Streamlit secrets
+raw_key = st.secrets.get("OPENAI_API_KEY", "")
+org_id  = st.secrets.get("OPENAI_ORG_ID", "")
+proj_id = st.secrets.get("OPENAI_PROJECT_ID", "")
+
+# Normalize: strip whitespace/newlines that sometimes sneak in via secrets UI
+OPENAI_KEY = (raw_key or "").strip()
 
 if not OPENAI_KEY:
-    st.error("Missing OPENAI_API_KEY. Add it in Streamlit secrets or as an env var.")
+    st.error("Missing OPENAI_API_KEY in Streamlit secrets.")
     st.stop()
 
-# Propagate to env so any downstream lib can also read it if needed
-os.environ["OPENAI_API_KEY"] = OPENAI_KEY
+# Validate key type and required fields
+is_project_key = OPENAI_KEY.startswith("sk-proj-")
+if is_project_key and (not org_id or not proj_id):
+    st.error("You provided a project key (sk-proj-...). Add OPENAI_ORG_ID and OPENAI_PROJECT_ID to secrets.")
+    st.stop()
 
-oc = OpenAI(api_key=OPENAI_KEY, timeout=60, max_retries=2)
+# Optional: small self-test to fail fast with a clear error
+try:
+    oc = OpenAI(
+        api_key=OPENAI_KEY,
+        organization=org_id if is_project_key else None,
+        project=proj_id if is_project_key else None,
+        timeout=60,
+        max_retries=2,
+    )
+    # light ping; avoids heavy calls
+    _ = oc.models.list()  # if unauthorized, raises AuthenticationError
+except Exception as e:
+    st.error(f"OpenAI auth check failed: {e}")
+    st.stop()
+
+# Make key available to libs that read env internally
+os.environ["OPENAI_API_KEY"] = OPENAI_KEY
+if is_project_key:
+    os.environ["OPENAI_ORG_ID"] = org_id
+    os.environ["OPENAI_PROJECT_ID"] = proj_id
+
 # ---------------- Paths / Constants ----------------
 PERSIST_DIR = "sec10q_chroma"
 COLLECTION  = "sec10q_collection"
