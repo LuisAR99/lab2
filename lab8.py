@@ -41,11 +41,6 @@ if not OPENAI_KEY:
     st.stop()
 
 # Validate key type and required fields
-is_project_key = OPENAI_KEY.startswith("sk-proj-")
-if is_project_key and (not org_id or not proj_id):
-    st.error("You provided a project key (sk-proj-...). Add OPENAI_ORG_ID and OPENAI_PROJECT_ID to secrets.")
-    st.stop()
-
 # Optional: small self-test to fail fast with a clear error
 try:
     oc = OpenAI(
