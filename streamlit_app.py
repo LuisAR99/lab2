@@ -13,6 +13,7 @@ lab3 = st.Page("lab3.py", title="Lab 3", icon="💬")
 lab4 = st.Page("lab4.py", title="Lab 4", icon="💬")
 lab5 = st.Page("lab5.py", title="Lab 5", icon="💬")
 lab6 = st.Page("lab6.py", title="Lab 6", icon="💬")
+lab8 = st.Page("lab8.py", title="Lab 8", icon="💬")
 
-nav = st.navigation(pages=[lab2, lab1, lab3, lab4, lab5, lab6])   
+nav = st.navigation(pages=[lab2, lab1, lab3, lab4, lab5, lab6, lab8])   
 nav.run()
