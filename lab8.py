@@ -24,14 +24,16 @@ st.title("📊 IST 688 — SEC 10-Q RAG + Re-Ranking Chatbot")
 
 # ---------------- Secrets / Clients ----------------
 
+OPENAI_KEY = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
 
-OPENAI_KEY = st.secrets("OPENAI_API_KEY")
 if not OPENAI_KEY:
-    st.error("Missing `OPENAI_KEY` in Streamlit secrets.")
+    st.error("Missing OPENAI_API_KEY. Add it in Streamlit secrets or as an env var.")
     st.stop()
 
-oc = OpenAI(api_key=OPENAI_KEY, timeout=60, max_retries=2)
+# Propagate to env so any downstream lib can also read it if needed
+os.environ["OPENAI_API_KEY"] = OPENAI_KEY
 
+oc = OpenAI(api_key=OPENAI_KEY, timeout=60, max_retries=2)
 # ---------------- Paths / Constants ----------------
 PERSIST_DIR = "sec10q_chroma"
 COLLECTION  = "sec10q_collection"
@@ -284,11 +286,3 @@ if run:
             stream = answer_with_context(user_q, hits)
             final_text = st.write_stream(stream)
 
-# ---------------- Step 3/4 Hints ----------------
-with st.expander("💡 Tips for your Lab Write-Up"):
-    st.markdown("""
-- **Compare Across Companies**: Ask the *same* question after filtering “Company” in the sidebar or by uploading both filings. Note differences in MD&A tone, growth drivers, and risk language.
-- **Explore Re-Ranking**: Toggle **LLM re-ranking** and vary **Max chunks to retrieve** (e.g., 5, 10, 20). Note how sources and answers change.
-- **Screenshots**: Include your question, top chunks screenshot, and final answer with citations.
-- **Limitations**: OCR/scanned PDFs may extract poorly; chunking can miss cross-page context; LLM re-ranking may occasionally over-prioritize generic risk language.
-""")
