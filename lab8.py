@@ -34,7 +34,7 @@ if not OPENAI_KEY:
     st.error("Missing `OPENAI_API_KEY` in Streamlit secrets.")
     st.stop()
 
-oc = OpenAI(api_key=OPENAI_KEY, timeout=60, max_retries=2)
+oc = OpenAI(api_key=OPENAI_API_KEY, timeout=60, max_retries=2)
 
 # ---------------- Paths / Constants ----------------
 PERSIST_DIR = "sec10q_chroma"
