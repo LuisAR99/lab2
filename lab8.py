@@ -23,11 +23,7 @@ st.set_page_config(page_title="SEC 10-Q RAG Bot", page_icon="📊", layout="wide
 st.title("📊 IST 688 — SEC 10-Q RAG + Re-Ranking Chatbot")
 
 # ---------------- Secrets / Clients ----------------
-def _secret(name: str) -> str:
-    try:
-        return st.secrets[name].strip()
-    except KeyError:
-        return ""
+
 
 OPENAI_KEY = st.secrets("OPENAI_API_KEY")
 if not OPENAI_KEY:
