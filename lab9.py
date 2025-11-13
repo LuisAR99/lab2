@@ -10,6 +10,9 @@ from openai import OpenAI
 # =========================
 # Setup: API Keys
 # =========================
+import streamlit as st
+
+st.write("Available secrets keys:", list(st.secrets.keys()))
 
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 OPENWEATHERMAP_API_KEY = st.secrets["OPENWEATHERMAP_API_KEY"]
