@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional, Tuple
 import requests
 import streamlit as st
 import openai
-
+from openai import OpenAI
 # =========================
 # Setup: API Keys
 # =========================
