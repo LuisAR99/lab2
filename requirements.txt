@@ -1,5 +1,5 @@
 streamlit
-openai == 0.28
+openai
 pdfplumber
 tiktoken>=0.7.0
 chromadb 
