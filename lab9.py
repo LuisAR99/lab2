@@ -11,9 +11,19 @@ import openai
 # Setup: API Keys
 # =========================
 
-openai.api_key = st.secrets["OPENAI_API_KEY"]
-OPENWEATHERMAP_API_KEY = st.secrets["OPENWEATHERMAP_API_KEY"]
+from openai import OpenAI
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
+def llm_call(system_prompt, user_prompt, model="gpt-4o-mini", temperature=0.3):
+    response = client.chat.completions.create(
+        model=model,
+        temperature=temperature,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+    )
+    return response.choices[0].message["content"]
 # =========================
 # Helper Functions
 # =========================
