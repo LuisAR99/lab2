@@ -11,6 +11,10 @@ import openai
 # Setup: API Keys
 # =========================
 
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+OPENWEATHERMAP_API_KEY = st.secrets["OPENWEATHERMAP_API_KEY"]
+
+
 from openai import OpenAI
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
